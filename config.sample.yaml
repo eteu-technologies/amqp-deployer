@@ -12,3 +12,5 @@ deployables:
   actions:
   - work-dir: "((env:HOME))/docker-svc/eteu-frontend-v2"
     command: [ "./update-commit.sh", "((data:git-commit))" ]
+    env:
+      GIT_COMMIT: "((data:git-commit))"

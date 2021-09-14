@@ -63,7 +63,6 @@ func replaceVars(raw string, data map[string]string) string {
 func processDeployable(deploy Deployable, data map[string]string) (err error) {
 	for idx, action := range deploy.Actions {
 		idx := idx
-		zap.L().Debug("processing action", zap.Int("idx", idx))
 		if len(action.Command) == 0 {
 			err = fmt.Errorf("action %d has empty command array", idx)
 			return
@@ -77,8 +76,16 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 
 		cmd := exec.Command(argv[0], argv...)
 		cmd.Dir = workdir
+		cmd.Env = os.Environ()
+		for key, value := range action.Env {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, replaceVars(value, data)))
+		}
+
+		// TODO: wire to zap or journald
 		cmd.Stderr = os.Stdout
 		cmd.Stdout = os.Stdout
+
+		zap.L().Debug("processing action", zap.Int("idx", idx), zap.Strings("argv", argv))
 		if err = cmd.Start(); err != nil {
 			err = fmt.Errorf("action %d command failed to execute: %w", idx, err)
 			return

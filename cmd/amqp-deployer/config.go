@@ -13,6 +13,7 @@ type Deployable struct {
 }
 
 type DeployableCommands struct {
-	WorkDir string   `yaml:"work-dir"`
-	Command []string `yaml:"command"`
+	WorkDir string            `yaml:"work-dir"`
+	Command []string          `yaml:"command"`
+	Env     map[string]string `yaml:"env"`
 }

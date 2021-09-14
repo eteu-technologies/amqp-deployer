@@ -1,4 +1,4 @@
-package main
+package message
 
 type DeployMessage struct {
 	Tag  string            `json:"tag"`

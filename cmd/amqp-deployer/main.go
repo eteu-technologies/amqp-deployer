@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
+
+	"github.com/eteu-technologies/amqp-deployer/internal/message"
 )
 
 var (
@@ -105,23 +107,23 @@ mainLoop:
 
 			zap.L().Debug("got delivery", zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Time("ts", delivery.Timestamp))
 
-			var message DeployMessage
-			if err := json.Unmarshal(delivery.Body, &message); err != nil {
+			var msg message.DeployMessage
+			if err := json.Unmarshal(delivery.Body, &msg); err != nil {
 				zap.L().Error("unable to parse deploy message", zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Error(err))
 				continue
 			}
 
 			config := GetConfig()
-			deployable, ok := config.DeployablesByTag[message.Tag]
+			deployable, ok := config.DeployablesByTag[msg.Tag]
 			if !ok {
-				zap.L().Error("unknown deployable", zap.String("tag", message.Tag), zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Error(err))
+				zap.L().Error("unknown deployable", zap.String("tag", msg.Tag), zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Error(err))
 				continue
 			}
 
 			// Validate required data
 			existingData := make(map[string]bool)
 			for _, key := range deployable.RequiredData {
-				if _, ok := message.Data[key]; ok {
+				if _, ok := msg.Data[key]; ok {
 					existingData[key] = true
 				}
 			}
@@ -134,13 +136,13 @@ mainLoop:
 					}
 				}
 
-				zap.L().Error("deployable has missing data", zap.String("tag", message.Tag), zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Strings("missing", missingData))
+				zap.L().Error("deployable has missing data", zap.String("tag", msg.Tag), zap.Uint64("delivery_tag", delivery.DeliveryTag), zap.Strings("missing", missingData))
 				continue
 			}
 
 			// Process
 			go func() {
-				if err := processDeployable(deployable, message.Data); err != nil {
+				if err := processDeployable(deployable, msg.Data); err != nil {
 					zap.L().Error("failed to process deployable", zap.Error(err))
 				}
 			}()
