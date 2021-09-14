@@ -120,6 +120,8 @@ mainLoop:
 				continue
 			}
 
+			msg.Data["tag"] = deployable.Tag
+
 			// Validate required data
 			existingData := make(map[string]bool)
 			for _, key := range deployable.RequiredData {
