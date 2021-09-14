@@ -1,0 +1,14 @@
+---
+
+deployables:
+- tag: "eteu-api"
+  required-data: [ "git-commit" ]
+  actions:
+  - work-dir: "((env:HOME))/docker-svc/eteu-api-v2"
+    command: [ "./update-commit.sh", "((data:git-commit))" ]
+
+- tag: "eteu-frontend"
+  required-data: [ "git-commit" ]
+  actions:
+  - work-dir: "((env:HOME))/docker-svc/eteu-frontend-v2"
+    command: [ "./update-commit.sh", "((data:git-commit))" ]

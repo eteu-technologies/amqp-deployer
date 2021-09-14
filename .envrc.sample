@@ -1,0 +1,8 @@
+use flake
+
+export ETEU_AMQP_DEPLOYER_DEBUG=true
+export ETEU_AMQP_DEPLOYER_AMQP_URL=''
+export ETEU_AMQP_DEPLOYER_AMQP_QUEUE='amqp-deployer'
+export ETEU_AMQP_DEPLOYER_CONFIG=./config.sample.yaml
+
+source .envrc.local
