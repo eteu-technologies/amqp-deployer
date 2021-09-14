@@ -40,7 +40,7 @@ func replaceAllGroupFunc(re *regexp.Regexp, str string, repl func([]string) stri
 	return result + str[lastIndex:]
 }
 
-func replaceVars(raw string, data map[string]string) string {
+func replaceVars(raw string, data map[string]string, actionEnv map[string]string) string {
 	return replaceAllGroupFunc(varPattern, raw, func(groups []string) string {
 		vtype := strings.ToLower(groups[1])
 		key := groups[2]
@@ -52,6 +52,9 @@ func replaceVars(raw string, data map[string]string) string {
 			}
 			return ""
 		case "env":
+			if v, ok := actionEnv[key]; ok {
+				return v
+			}
 			if _, ok := allowedEnvvars[key]; ok {
 				return os.Getenv(key)
 			}
@@ -68,10 +71,10 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 			return
 		}
 
-		workdir := replaceVars(action.WorkDir, data)
+		workdir := replaceVars(action.WorkDir, data, action.Env)
 		argv := []string{}
 		for _, arg := range action.Command {
-			argv = append(argv, replaceVars(arg, data))
+			argv = append(argv, replaceVars(arg, data, action.Env))
 		}
 
 		args := []string{}
@@ -83,7 +86,7 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 		cmd.Dir = workdir
 		cmd.Env = os.Environ()
 		for key, value := range action.Env {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, replaceVars(value, data)))
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, replaceVars(value, data, action.Env)))
 		}
 
 		// TODO: wire to zap or journald
