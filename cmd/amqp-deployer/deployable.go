@@ -74,7 +74,12 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 			argv = append(argv, replaceVars(arg, data))
 		}
 
-		cmd := exec.Command(argv[0], argv...)
+		args := []string{}
+		if len(argv) > 1 {
+			args = argv[1:]
+		}
+
+		cmd := exec.Command(argv[0], args...)
 		cmd.Dir = workdir
 		cmd.Env = os.Environ()
 		for key, value := range action.Env {
