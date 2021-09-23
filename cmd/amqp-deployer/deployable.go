@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -89,9 +90,8 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, replaceVars(value, data, action.Env)))
 		}
 
-		// TODO: wire to zap or journald
-		cmd.Stderr = os.Stdout
-		cmd.Stdout = os.Stdout
+		cmd.Stderr = NewZapWriter(zapcore.WarnLevel, "stderr", zap.Int("idx", idx))
+		cmd.Stdout = NewZapWriter(zapcore.InfoLevel, "stdout", zap.Int("idx", idx))
 
 		zap.L().Debug("processing action", zap.Int("idx", idx), zap.Strings("argv", argv))
 		if err = cmd.Start(); err != nil {
