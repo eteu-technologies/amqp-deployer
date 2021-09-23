@@ -230,8 +230,6 @@ func fileChangesWatcher(watcher *fsnotify.Watcher, configFile string) {
 				if err := watcher.Add(configFile); err != nil {
 					zap.L().Warn("failed to watch config file", zap.Error(err))
 				}
-			} else if event.Op&fsnotify.Write != 0 {
-				// no-op
 			}
 
 			if _, err := LoadConfig(configFile); err != nil {
