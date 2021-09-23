@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
 
+	"github.com/eteu-technologies/amqp-deployer/internal/core"
 	"github.com/eteu-technologies/amqp-deployer/internal/message"
 )
 
@@ -89,6 +91,14 @@ func entrypoint() (err error) {
 		zap.L().Info("got signal")
 		exitCh <- true
 	}()
+
+	zap.L().Debug("entrypoint()", zap.String("version", core.Version))
+	zap.L().Debug("platform info",
+		zap.String("go_version", runtime.Version()),
+		zap.String("go_os", runtime.GOOS),
+		zap.String("go_arch", runtime.GOARCH),
+		zap.Int("cpus", runtime.NumCPU()),
+	)
 
 	if _, err = LoadConfig(configFile); err != nil {
 		return
