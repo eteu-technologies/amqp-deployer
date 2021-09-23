@@ -1,5 +1,5 @@
 {
-  description = "amqp-deploy";
+  description = "amqp-deployer";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
@@ -18,9 +18,13 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       rec {
+        packages.eteu-amqp-deployer = pkgs.callPackage ./default.nix { rev = if (self ? rev) then self.rev else "dirty"; };
+
+        defaultPackage = packages.eteu-amqp-deployer;
+
         devShell = pkgs.mkShell {
           nativeBuildInputs = [
-            pkgs.go
+            pkgs.go_1_17
             pkgs.golangci-lint
             pkgs.gopls
           ];
