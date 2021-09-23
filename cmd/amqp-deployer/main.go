@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/yaml.v2"
@@ -18,10 +19,11 @@ import (
 )
 
 var (
-	debugMode  = strings.ToLower(os.Getenv("ETEU_AMQP_DEPLOYER_DEBUG")) == "true"
-	amqpURL    = requireEnv("ETEU_AMQP_DEPLOYER_AMQP_URL")
-	amqpQueue  = requireEnv("ETEU_AMQP_DEPLOYER_AMQP_QUEUE")
-	configFile = requireEnv("ETEU_AMQP_DEPLOYER_CONFIG")
+	debugMode   = strings.ToLower(os.Getenv("ETEU_AMQP_DEPLOYER_DEBUG")) == "true"
+	configWatch = strings.ToLower(os.Getenv("ETEU_AMQP_DEPLOYER_CONFIG_WATCH")) == "true"
+	amqpURL     = requireEnv("ETEU_AMQP_DEPLOYER_AMQP_URL")
+	amqpQueue   = requireEnv("ETEU_AMQP_DEPLOYER_AMQP_QUEUE")
+	configFile  = requireEnv("ETEU_AMQP_DEPLOYER_CONFIG")
 
 	configRef atomic.Value
 )
@@ -90,6 +92,21 @@ func entrypoint() (err error) {
 
 	if _, err = LoadConfig(configFile); err != nil {
 		return
+	}
+
+	// Set up config file changes watcher
+	if configWatch {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			zap.L().Fatal("failed to set up file watcher", zap.Error(err))
+		}
+
+		if err := watcher.Add(configFile); err != nil {
+			zap.L().Fatal("failed to watch the config file base dir", zap.String("file", configFile), zap.Error(err))
+		}
+
+		defer func() { _ = watcher.Close() }()
+		go fileChangesWatcher(watcher, configFile)
 	}
 
 	if c, err = setupConsumer(amqpURL, amqpQueue); err != nil {
@@ -187,4 +204,44 @@ func configureLogging(debug bool) error {
 	zap.ReplaceGlobals(logger)
 
 	return nil
+}
+
+func fileChangesWatcher(watcher *fsnotify.Watcher, configFile string) {
+	defer func() { zap.L().Debug("file watcher exit") }()
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+
+			// Don't care about chmod at all
+			if event.Op == fsnotify.Chmod {
+				continue
+			}
+
+			zap.L().Debug("fs event", zap.String("file", event.Name), zap.String("event", event.Op.String()))
+
+			if event.Op&fsnotify.Remove != 0 {
+				continue
+			} else if event.Op&fsnotify.Rename != 0 {
+				// need to re-watch the same file
+				<-time.After(50 * time.Millisecond) // XXX: lstat ENOENT
+				if err := watcher.Add(configFile); err != nil {
+					zap.L().Warn("failed to watch config file", zap.Error(err))
+				}
+			} else if event.Op&fsnotify.Write != 0 {
+				// no-op
+			}
+
+			if _, err := LoadConfig(configFile); err != nil {
+				zap.L().Warn("failed to reload configuration", zap.Error(err))
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			zap.L().Warn("file watcher error", zap.Error(err))
+		}
+	}
 }
