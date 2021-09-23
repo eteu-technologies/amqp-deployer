@@ -1,5 +1,6 @@
 /.direnv
 /.envrc
 /.envrc.local
+/out
 /result
 /config.yaml
