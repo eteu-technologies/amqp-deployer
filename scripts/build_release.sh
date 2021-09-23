@@ -22,5 +22,5 @@ for target in "${targets[@]}"; do
 done
 
 pushd out >/dev/null
-sha256sum * > SHA256SUMS
+sha256sum ./* > SHA256SUMS
 popd >/dev/null
