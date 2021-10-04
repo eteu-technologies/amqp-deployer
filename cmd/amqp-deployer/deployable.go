@@ -99,10 +99,10 @@ func processDeployable(deploy Deployable, data map[string]string) (err error) {
 			return
 		}
 
-		go func() {
-			err := cmd.Wait()
-			zap.L().Info("action command exited", zap.String("tag", deploy.Tag), zap.Int("idx", idx), zap.Error(err))
-		}()
+		if err = cmd.Wait(); err != nil {
+			err = fmt.Errorf("action %d command failed: %w", idx, err)
+			return
+		}
 	}
 
 	return
