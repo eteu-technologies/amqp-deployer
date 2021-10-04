@@ -18,7 +18,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in
       rec {
-        packages.eteu-amqp-deployer = pkgs.callPackage ./default.nix { rev = "0.0.2"; };
+        packages.eteu-amqp-deployer = pkgs.callPackage ./default.nix { rev = if (self ? rev) then self.rev else "dirty"; };
 
         defaultPackage = packages.eteu-amqp-deployer;
 
